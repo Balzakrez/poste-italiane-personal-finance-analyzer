@@ -74,6 +74,24 @@ Le causali rimaste senza categoria dopo il Livello 1 vengono inviate, in batch, 
 
 **Se Ollama non è disponibile** (non installato, non avviato, o irraggiungibile): l'app se ne accorge con un controllo rapido *prima* di tentare la classificazione, e salta direttamente al risultato del solo Livello 1 — **l'import non si blocca né rallenta**. Le transazioni non coperte dalle regole restano semplicemente "Da categorizzare", modificabili in futuro (manualmente, o rilanciando l'import quando Ollama sarà attivo). Il messaggio a fine import indica sempre quale dei due scenari si è verificato.
 
+### Configurazione del modello (personale)
+
+Quale modello usare, e dove trovare Ollama, si configura in `src/main/resources/application.yml`. È una scelta **personale**: dipende da quale modello hai scaricato tu e da quanta RAM ha la tua macchina — non c'è un valore giusto per tutti.
+
+```yaml
+spring:
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        model: qwen2.5:7b
+```
+
+- `base-url`: dove risponde Ollama. Resta `localhost:11434` a meno che tu non lo faccia girare su un'altra macchina della tua rete.
+- `chat.model`: il nome esatto del modello scaricato con `ollama pull` (es. `qwen2.5:7b` per una macchina con più RAM, `qwen2.5:3b` per una più leggera). Deve combaciare con l'output di `ollama list`, altrimenti Ollama risponde con un errore "model not found" e quella transazione resta "Da categorizzare".
+
+Se cambi modello, basta aggiornare `chat.model` e riavviare l'app — nessun'altra modifica necessaria.
+
 ---
 
 ## Struttura del progetto
