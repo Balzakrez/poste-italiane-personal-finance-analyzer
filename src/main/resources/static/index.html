@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Personal Finance Analyzer</title>
+    <style>
+        :root {
+            --ink: #12171d;
+            --paper: #1b232b;
+            --paper-line: #2c3742;
+            --text: #e8e3d5;
+            --text-muted: #8b95a3;
+            --entrata: #5fa876;
+            --uscita: #bd5c42;
+            --accent: #c9a227;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--ink);
+            color: var(--text);
+            font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+            line-height: 1.5;
+        }
+
+        .pagina {
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem 5rem;
+        }
+
+        .testata {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--paper-line);
+            margin-bottom: 2rem;
+        }
+
+        .testata h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin: 0;
+            letter-spacing: 0.01em;
+        }
+
+        .testata p {
+            margin: 0.25rem 0 0;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .carica {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .carica input[type="file"] {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            max-width: 340px;
+        }
+
+        .carica input[type="file"]::file-selector-button {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--paper-line);
+            padding: 0.5rem 0.9rem;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 0.85rem;
+            cursor: pointer;
+            margin-right: 0.6rem;
+            transition: border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .carica input[type="file"]::file-selector-button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .carica button {
+            background: var(--accent);
+            color: var(--ink);
+            border: none;
+            padding: 0.6rem 1.3rem;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.1s ease;
+        }
+
+        .carica button:hover:not(:disabled) {
+            background: color-mix(in srgb, var(--accent) 85%, white);
+        }
+
+        .carica button:active:not(:disabled) {
+            background: color-mix(in srgb, var(--accent) 85%, black);
+            transform: translateY(1px);
+        }
+
+        .carica button:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        .esito {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.75rem;
+        }
+
+        .esito.errore { color: var(--uscita); }
+
+        .spinner {
+            display: inline-block;
+            width: 0.85em;
+            height: 0.85em;
+            margin-right: 0.5em;
+            border: 2px solid var(--paper-line);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            vertical-align: -0.15em;
+            animation: ruota 0.6s linear infinite;
+        }
+
+        @keyframes ruota {
+            to { transform: rotate(360deg); }
+        }
+
+        .barra-avanzamento {
+            position: relative;
+            height: 3px;
+            width: 100%;
+            margin-top: 0.6rem;
+            background: var(--paper-line);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .barra-avanzamento span {
+            position: absolute;
+            top: 0;
+            left: -30%;
+            width: 30%;
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            animation: scorrimento 1.1s ease-in-out infinite;
+        }
+
+        @keyframes scorrimento {
+            0% { left: -30%; }
+            100% { left: 100%; }
+        }
+
+        .strip {
+            display: flex;
+            border: 1px solid var(--paper-line);
+            background: var(--paper);
+            margin-bottom: 2.5rem;
+        }
+
+        .strip .voce {
+            flex: 1;
+            padding: 1.25rem 1.5rem;
+            border-right: 1px solid var(--paper-line);
+        }
+
+        .strip .voce:last-child { border-right: none; }
+
+        .strip .etichetta {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.35rem;
+        }
+
+        .strip .valore {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 1.5rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .voce.entrate .valore { color: var(--entrata); }
+        .voce.uscite .valore { color: var(--uscita); }
+
+        .intestazione-sezione {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .intestazione-sezione h2 {
+            margin: 0;
+        }
+
+        h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0 0 1rem;
+        }
+
+        .link-espandi {
+            background: transparent;
+            border: 1px solid var(--paper-line);
+            padding: 0.3rem 0.7rem;
+            color: var(--text-muted);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .link-espandi:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .link-espandi[hidden] { display: none; }
+
+        .riepilogo-categorie {
+            border: 1px solid var(--paper-line);
+            background: var(--paper);
+            margin-bottom: 2.5rem;
+        }
+
+        .riepilogo-mensile {
+            border: 1px solid var(--paper-line);
+            background: var(--paper);
+            margin-bottom: 2.5rem;
+        }
+
+        .riepilogo-mensile .mese:last-child {
+            border-bottom: none;
+        }
+
+        .riga-categoria {
+            display: grid;
+            grid-template-columns: 1fr clamp(90px, 24vw, 150px) clamp(70px, 16vw, 100px);
+            align-items: center;
+            gap: 0 1rem;
+            padding: 0.6rem 1.25rem;
+            border-top: 1px solid var(--paper-line);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 0.85rem;
+        }
+
+        .riga-categoria:first-child { border-top: none; }
+
+        .riga-categoria .nome-categoria.non-categorizzata {
+            font-style: italic;
+            color: var(--text-muted);
+        }
+
+        .riga-categoria .barra-categoria {
+            height: 6px;
+            background: var(--ink);
+        }
+
+        .riga-categoria .barra-categoria span {
+            display: block;
+            height: 100%;
+            background: var(--uscita);
+        }
+
+        .riga-categoria .totale-categoria {
+            text-align: right;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-variant-numeric: tabular-nums;
+            color: var(--uscita);
+        }
+
+        .categorie-mese {
+            background: var(--paper);
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.6rem;
+        }
+
+        /* Intestazione della lista mensile, allineata alle stesse colonne di ogni riga/summary */
+        .intestazione-mensile {
+            display: grid;
+            grid-template-columns: 1.4rem 1fr clamp(60px, 14vw, 110px) clamp(60px, 14vw, 110px) clamp(60px, 14vw, 110px) clamp(70px, 18vw, 140px);
+            gap: 0 1rem;
+            padding: 0 1rem 0.5rem;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--paper-line);
+        }
+
+        .intestazione-mensile span { text-align: right; }
+        .intestazione-mensile span:first-child,
+        .intestazione-mensile span:nth-child(2) { text-align: left; }
+
+        .mese {
+            border-bottom: 1px solid var(--paper-line);
+        }
+
+        .mese[open] {
+            margin-bottom: 1.25rem;
+            background: var(--ink);
+            border: 1px solid var(--paper-line);
+        }
+
+        .mese summary {
+            display: grid;
+            grid-template-columns: 1.4rem 1fr clamp(60px, 14vw, 110px) clamp(60px, 14vw, 110px) clamp(60px, 14vw, 110px) clamp(70px, 18vw, 140px);
+            align-items: center;
+            gap: 0 1rem;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            list-style: none;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .mese summary::-webkit-details-marker { display: none; }
+
+        .mese summary:hover { background: var(--ink); }
+
+        .caret {
+            color: var(--text-muted);
+            transition: transform 0.15s ease;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .mese[open] .caret { transform: rotate(90deg); }
+
+        .etichetta-mese {
+            text-align: left;
+            font-family: Georgia, serif;
+        }
+
+        .valore-entrate { color: var(--entrata); text-align: right; }
+        .valore-uscite { color: var(--uscita); text-align: right; }
+        .valore-saldo { text-align: right; }
+
+        .barra {
+            display: flex;
+            height: 8px;
+            width: 100%;
+            background: var(--paper-line);
+        }
+
+        .barra .segmento.entrate { background: var(--entrata); }
+        .barra .segmento.uscite { background: var(--uscita); }
+
+        .dettaglio-transazioni {
+            padding: 0.25rem 1rem 1.5rem 2.7rem;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .riga-transazione {
+            display: grid;
+            grid-template-columns: clamp(60px, 14vw, 78px) 1fr clamp(90px, 26vw, 140px) clamp(70px, 16vw, 96px);
+            gap: 0 1rem;
+            padding: 0.4rem 0;
+            border-top: 1px solid var(--paper-line);
+            font-size: 0.85rem;
+            align-items: start;
+        }
+
+        .riga-transazione:first-child { border-top: none; }
+
+        .riga-transazione .data { color: var(--text-muted); }
+
+        .riga-transazione .causale {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .riga-transazione .categoria {
+            text-align: right;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            line-height: 1.25;
+        }
+
+        .riga-transazione .categoria.non-categorizzata {
+            font-style: italic;
+        }
+
+        .riga-transazione .categoria.categorizzata-ai {
+            color: var(--accent);
+        }
+
+        .icona-ai {
+            font-size: 0.75em;
+            margin-right: 0.25em;
+        }
+
+        .icona-stato-ai {
+            color: var(--accent);
+            margin-right: 0.4em;
+        }
+
+        .icona-stato-regole {
+            color: var(--text-muted);
+            margin-right: 0.4em;
+        }
+
+        .nota-stato-ai {
+            color: var(--accent);
+        }
+
+        .nota-stato-regole {
+            color: var(--text-muted);
+        }
+
+        .riga-transazione .importo {
+            text-align: right;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .riga-transazione .importo.entrata { color: var(--entrata); }
+        .riga-transazione .importo.uscita { color: var(--uscita); }
+
+        .caricamento-dettaglio {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            padding: 0.5rem 0;
+        }
+
+        .vuoto {
+            color: var(--text-muted);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 0.9rem;
+            padding: 2rem 1.25rem;
+        }
+    </style>
+</head>
+<body>
+<div class="pagina">
+
+    <div class="testata">
+        <div>
+            <h1>Personal Finance Analyzer</h1>
+            <p>Registro Movimenti</p>
+        </div>
+        <form class="carica" id="formCarica">
+            <input type="file" id="inputFile" accept=".xlsx" required>
+            <button type="submit" id="bottoneCarica">Carica estratto</button>
+        </form>
+    </div>
+    <div class="esito" id="esito"></div>
+
+    <div class="strip">
+        <div class="voce entrate">
+            <div class="etichetta">Entrate</div>
+            <div class="valore" id="totaleEntrate">—</div>
+        </div>
+        <div class="voce uscite">
+            <div class="etichetta">Uscite</div>
+            <div class="valore" id="totaleUscite">—</div>
+        </div>
+        <div class="voce">
+            <div class="etichetta">Saldo</div>
+            <div class="valore" id="totaleSaldo">—</div>
+        </div>
+    </div>
+
+    <h2>Spese per categoria</h2>
+    <div class="riepilogo-categorie" id="contenitoreCategorie"><p class="vuoto">Nessuna spesa categorizzata.</p></div>
+
+    <div class="intestazione-sezione">
+        <h2>Andamento mensile</h2>
+        <button type="button" id="bottoneEspandiTutto" class="link-espandi" hidden>Espandi tutto</button>
+    </div>
+    <div id="contenitoreMensile" class="riepilogo-mensile"><p class="vuoto">Nessun movimento registrato. Carica un estratto conto per iniziare.</p></div>
+
+</div>
+
+<script>
+    const MESI = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+
+    const formatoValuta = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
+
+    // Etichette leggibili per i valori dell'enum Category lato backend
+    const ETICHETTE_CATEGORIA = {
+        CASA_UTENZE_ASSICURAZIONI: 'Casa, utenze e assicurazioni',
+        SPESA_QUOTIDIANA: 'Spesa quotidiana',
+        TRASPORTI: 'Trasporti',
+        SALUTE: 'Salute',
+        SHOPPING_TEMPO_LIBERO: 'Shopping e tempo libero',
+        TASSE_COMMISSIONI: 'Tasse e commissioni',
+        TRASFERIMENTI_PRELIEVI: 'Trasferimenti e prelievi',
+        STIPENDIO_COMPENSI: 'Stipendio e compensi',
+        ALTRE_ENTRATE: 'Altre entrate'
+    };
+
+    // Cache delle transazioni già scaricate, per non richiedere due volte lo stesso mese
+    const transazioniPerMeseCache = {};
+
+    function formattaMese(chiave) {
+        const [anno, mese] = chiave.split('-');
+        return `${MESI[parseInt(mese, 10) - 1]} ${anno}`;
+    }
+
+    function formattaData(iso) {
+        const [anno, mese, giorno] = iso.split('-');
+        return `${giorno}/${mese}/${anno}`;
+    }
+
+    function formattaCategoria(categoria) {
+        if (!categoria) return 'Da categorizzare';
+        return ETICHETTE_CATEGORIA[categoria] || categoria;
+    }
+
+    async function caricaRiepilogoTotale() {
+        const risposta = await fetch('/api/analytics/riepilogo');
+        const dati = await risposta.json();
+        document.getElementById('totaleEntrate').textContent = formatoValuta.format(dati.totaleEntrate);
+        document.getElementById('totaleUscite').textContent = formatoValuta.format(dati.totaleUscite);
+        document.getElementById('totaleSaldo').textContent = formatoValuta.format(dati.saldo);
+    }
+
+    function costruisciRigaCategoria(voce, massimo) {
+        const percentuale = massimo > 0 ? (voce.totale / massimo) * 100 : 0;
+        const classeNome = voce.categoria ? 'nome-categoria' : 'nome-categoria non-categorizzata';
+
+        return `
+      <div class="riga-categoria">
+        <span class="${classeNome}">${formattaCategoria(voce.categoria)}</span>
+        <span class="barra-categoria"><span style="width:${percentuale}%"></span></span>
+        <span class="totale-categoria">${formatoValuta.format(voce.totale)}</span>
+      </div>`;
+    }
+
+    async function caricaRiepilogoCategorie() {
+        const risposta = await fetch('/api/analytics/riepilogo/categorie');
+        const categorie = await risposta.json();
+        const contenitore = document.getElementById('contenitoreCategorie');
+
+        if (categorie.length === 0) {
+            contenitore.innerHTML = '<p class="vuoto">Nessuna spesa categorizzata.</p>';
+            return;
+        }
+
+        const massimo = Math.max(...categorie.map(c => c.totale));
+        contenitore.innerHTML = categorie.map(c => costruisciRigaCategoria(c, massimo)).join('');
+    }
+
+    function raggruppaSpesePerCategoria(transazioni) {
+        const totaliPerCategoria = new Map();
+
+        transazioni
+            .filter(t => t.tipoMovimento === 'USCITA')
+            .forEach(t => {
+                const chiave = t.categoria || null;
+                totaliPerCategoria.set(chiave, (totaliPerCategoria.get(chiave) || 0) + t.importo);
+            });
+
+        return [...totaliPerCategoria.entries()]
+            .map(([categoria, totale]) => ({ categoria, totale }))
+            .sort((a, b) => b.totale - a.totale);
+    }
+
+    async function caricaRiepilogoMensile() {
+        const risposta = await fetch('/api/analytics/riepilogo/mensile');
+        const mesi = await risposta.json();
+        const contenitore = document.getElementById('contenitoreMensile');
+        const bottoneEspandiTutto = document.getElementById('bottoneEspandiTutto');
+
+        if (mesi.length === 0) {
+            contenitore.innerHTML = '<p class="vuoto">Nessun movimento registrato. Carica un estratto conto per iniziare.</p>';
+            bottoneEspandiTutto.hidden = true;
+            return;
+        }
+
+        const massimo = Math.max(...mesi.flatMap(m => [m.totaleEntrate, m.totaleUscite]));
+        const intestazione = `
+      <div class="intestazione-mensile">
+        <span></span><span>Mese</span><span>Entrate</span><span>Uscite</span><span>Saldo</span><span></span>
+      </div>`;
+        const voci = mesi.map(m => costruisciVoceMese(m, massimo)).join('');
+
+        contenitore.innerHTML = intestazione + voci;
+        contenitore.querySelectorAll('.mese').forEach(collegaEspansione);
+
+        bottoneEspandiTutto.hidden = false;
+        aggiornaTestoBottoneEspandiTutto();
+    }
+
+    function costruisciVoceMese(mese, massimo) {
+        const percentualeEntrate = massimo > 0 ? (mese.totaleEntrate / massimo) * 100 : 0;
+        const percentualeUscite = massimo > 0 ? (mese.totaleUscite / massimo) * 100 : 0;
+
+        return `
+      <details class="mese" data-mese="${mese.mese}">
+        <summary>
+          <span class="caret">▸</span>
+          <span class="etichetta-mese">${formattaMese(mese.mese)}</span>
+          <span class="valore-entrate">${formatoValuta.format(mese.totaleEntrate)}</span>
+          <span class="valore-uscite">${formatoValuta.format(mese.totaleUscite)}</span>
+          <span class="valore-saldo">${formatoValuta.format(mese.saldo)}</span>
+          <span class="barra">
+            <span class="segmento entrate" style="width:${percentualeEntrate}%"></span>
+            <span class="segmento uscite" style="width:${percentualeUscite}%"></span>
+          </span>
+        </summary>
+        <div class="dettaglio-transazioni"><p class="caricamento-dettaglio">Caricamento…</p></div>
+      </details>`;
+    }
+
+    function collegaEspansione(elementoMese) {
+        // Ricalcola l'etichetta del bottone globale ad ogni apertura/chiusura manuale del singolo mese
+        elementoMese.addEventListener('toggle', aggiornaTestoBottoneEspandiTutto);
+
+        elementoMese.addEventListener('toggle', async () => {
+            if (!elementoMese.open) return;
+
+            const chiaveMese = elementoMese.dataset.mese;
+            const contenitoreDettaglio = elementoMese.querySelector('.dettaglio-transazioni');
+
+            const transazioni = await ottieniTransazioniDelMese(chiaveMese);
+            const categorieMese = raggruppaSpesePerCategoria(transazioni);
+            const massimoMese = categorieMese.length > 0 ? Math.max(...categorieMese.map(c => c.totale)) : 0;
+
+            const blocoCategorie = categorieMese.length > 0
+                ? `<div class="categorie-mese">${categorieMese.map(c => costruisciRigaCategoria(c, massimoMese)).join('')}</div>`
+                : '';
+
+            contenitoreDettaglio.innerHTML = blocoCategorie + transazioni.map(costruisciRigaTransazione).join('');
+        }, { once: true }); // basta caricarle la prima volta che si apre
+    }
+
+    async function ottieniTransazioniDelMese(chiaveMese) {
+        if (!transazioniPerMeseCache[chiaveMese]) {
+            const risposta = await fetch(`/api/analytics/transazioni/${chiaveMese}`);
+            transazioniPerMeseCache[chiaveMese] = await risposta.json();
+        }
+        return transazioniPerMeseCache[chiaveMese];
+    }
+
+    function classeCategoriaTransazione(transazione) {
+        if (!transazione.categoria) return 'categoria non-categorizzata';
+        if (transazione.fonteCategoria === 'AI') return 'categoria categorizzata-ai';
+        return 'categoria';
+    }
+
+    function costruisciRigaTransazione(transazione) {
+        const segno = transazione.tipoMovimento === 'USCITA' ? 'uscita' : 'entrata';
+        const prefisso = transazione.tipoMovimento === 'USCITA' ? '−' : '+';
+        const classeCategoria = classeCategoriaTransazione(transazione);
+        const etichettaCategoria = formattaCategoria(transazione.categoria);
+        const isAi = transazione.fonteCategoria === 'AI';
+        const titoloCategoria = isAi ? `${etichettaCategoria} (AI)` : etichettaCategoria;
+        const iconaAi = isAi ? '<span class="icona-ai">✦</span>' : '';
+
+        return `
+      <div class="riga-transazione">
+        <span class="data">${formattaData(transazione.dataValuta)}</span>
+        <span class="causale" title="${transazione.causale}">${transazione.causale}</span>
+        <span class="${classeCategoria}" title="${titoloCategoria}">${iconaAi}${etichettaCategoria}</span>
+        <span class="importo ${segno}">${prefisso} ${formatoValuta.format(transazione.importo)}</span>
+      </div>`;
+    }
+
+    // Soglia: con almeno 2 mesi aperti il bottone propone di comprimere, altrimenti di espandere.
+    const SOGLIA_MESI_ESPANSI_PER_COMPRIMERE = 2;
+
+    function aggiornaTestoBottoneEspandiTutto() {
+        const numeroMesiEspansi = document.querySelectorAll('.mese[open]').length;
+        const tuttiEspansi = numeroMesiEspansi >= SOGLIA_MESI_ESPANSI_PER_COMPRIMERE;
+        document.getElementById('bottoneEspandiTutto').textContent = tuttiEspansi ? 'Comprimi tutto' : 'Espandi tutto';
+    }
+
+    // Apre o chiude tutti i <details> mensili insieme; il toggle su ciascuno
+    // riusa lo stesso listener 'once' già collegato, quindi il lazy-loading resta invariato.
+    document.getElementById('bottoneEspandiTutto').addEventListener('click', (evento) => {
+        const staEspandendo = evento.target.textContent === 'Espandi tutto';
+        document.querySelectorAll('.mese').forEach(mese => { mese.open = staEspandendo; });
+        aggiornaTestoBottoneEspandiTutto();
+    });
+
+    async function aggiornaDashboard() {
+        await Promise.all([caricaRiepilogoTotale(), caricaRiepilogoMensile(), caricaRiepilogoCategorie()]);
+    }
+
+    async function recuperaIconaStatoAi() {
+        try {
+            const risposta = await fetch('/api/ai/disponibilita');
+            const stato = await risposta.json();
+            return stato.disponibile
+                ? '<span class="icona-stato-ai" title="Categorizzazione AI attiva">✦</span>'
+                : '<span class="icona-stato-regole" title="Ollama non disponibile: solo regole">⚙</span>';
+        } catch (errore) {
+            return '<span class="icona-stato-regole" title="Ollama non disponibile: solo regole">⚙</span>';
+        }
+    }
+
+    document.getElementById('formCarica').addEventListener('submit', async (evento) => {
+        evento.preventDefault();
+
+        const input = document.getElementById('inputFile');
+        const bottone = document.getElementById('bottoneCarica');
+        const esito = document.getElementById('esito');
+
+        if (!input.files[0]) return;
+
+        const datiForm = new FormData();
+        datiForm.append('file', input.files[0]);
+
+        bottone.disabled = true;
+        esito.classList.remove('errore');
+        esito.innerHTML = '<span class="spinner"></span>Caricamento in corso…<div class="barra-avanzamento"><span></span></div>';
+
+        const iconaStato = await recuperaIconaStatoAi();
+        esito.innerHTML = `<span class="spinner"></span>${iconaStato}Caricamento in corso…<div class="barra-avanzamento"><span></span></div>`;
+
+        try {
+            const risposta = await fetch('/api/transazioni/import', { method: 'POST', body: datiForm });
+            if (!risposta.ok) throw new Error('Import fallito');
+
+            const risultato = await risposta.json();
+            const noteAi = {
+                APPLICATA: '<span class="nota-stato-ai"><span class="icona-stato-ai">✦</span>categorizzazione AI applicata</span>',
+                OLLAMA_NON_DISPONIBILE: '<span class="nota-stato-regole"><span class="icona-stato-regole">⚙</span>Ollama non disponibile, categorizzazione solo su regole</span>'
+            }[risultato.esitoClassificazioneAi];
+
+            esito.innerHTML = `${risultato.righeImportate} registrate, ${risultato.righeDuplicate} duplicate, ${risultato.righeNonValide} non valide.`
+                + (noteAi ? ` (${noteAi})` : '');
+
+            for (const chiave in transazioniPerMeseCache) delete transazioniPerMeseCache[chiave];
+            await aggiornaDashboard();
+            input.value = '';
+        } catch (errore) {
+            esito.textContent = 'Caricamento non riuscito. Verifica il formato del file.';
+            esito.classList.add('errore');
+        } finally {
+            bottone.disabled = false;
+        }
+    });
+
+    aggiornaDashboard();
+</script>
+</body>
+</html>
